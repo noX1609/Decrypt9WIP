@@ -117,7 +117,7 @@ export LIBPATHS	:=	$(foreach dir,$(LIBDIRS),-L$(dir)/lib)
 .PHONY: common clean all gateway firm binary cakehax cakerop brahma release
 
 #---------------------------------------------------------------------------------
-all: binary
+all: firm
 
 common:
 	@[ -d $(OUTPUT_D) ] || mkdir -p $(OUTPUT_D)
