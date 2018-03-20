@@ -91,29 +91,26 @@ const char *DumpGameCartFullDesc    = "Dump the inserted gamecart to the Game di
                                       "Game directory as a ready-to-install CIA file.",
 
            *DumpPrivateHeaderDesc   = "Dump the private header of the inserted gamecart "
-                                      "to the Game directory, for use with flashcarts.";
+                                      "to the Game directory, for use with flashcarts.",
+                                      
+           *DumpCartSaveDesc        = "Dump the savegame from the inserted gamecart.\n\n"
+           
+                                      "Currently only works for NDS type gamecarts.",
+                                      
+           *FlashCartSaveDesc       = "Flash a savegame to the inserted gamecart.\n\n"
+           
+                                      "Currently only works for NDS type gamecarts.";
 
 
 // NDS Flashcart Options
 const char *AK2iDumpDesc            = "Dump the AK2i flashcart bootrom to the Game "
-                                      "directory.\n\n",
-
-           *AK2iInjectDesc          = "Inject the Ak2i flashcart bootrom from the Game "
                                       "directory.",
 
-           *AK2iAutoPatchDesc       = "Automatic NTRCARDHAX injection to the AK2i "
-                                      "flashcart."
-                                      
-                                      "AK2i 1.41 version required. If your cart is not on "
-                                      "this version, upgrade or downgrade to it.",
+           *AK2iFlashDesc           = "Flash the Ak2i flashcart bootrom from the Game "
+                                      "directory.\n\n"
 
-           *AK2iPatchAndInjectDesc  = "Patch and inject NTRCARDHAX payload to the "
-                                      "AK2i flashcart.\n\n"
-                                      
                                       "AK2i 1.41 version required. If your cart is not on "
-                                      "this version, upgrade or downgrade to it.",
-
-           *AK2iRestoreBootromDesc  = "Restore the AK2i flashcart original bootrom.";
+                                      "this version, upgrade or downgrade to it.";
 
 
 // SysNAND/EmuNAND Backup/Restore Options

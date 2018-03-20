@@ -11,11 +11,12 @@
 #define GC_CIA_ENCRYPT  (1<<5)
 #define GC_CXI_ONLY     (1<<6)
 #define GC_BOSS_PROCESS (1<<7)
-#define GC_BOSS_ENCRYPT (1<<8) 
+#define GC_BOSS_ENCRYPT (1<<8)
 
 #define CD_TRIM         (1<<0)
 #define CD_DECRYPT      (1<<1)
 #define CD_MAKECIA      (1<<2)
+#define CD_FLASH        (1<<3)
 
 #define MAX_ENTRIES 1024
 #define CIA_CERT_SIZE 0xA00
@@ -50,7 +51,7 @@ typedef struct {
 	u8  sector_zero_offset[0x4];
 	u8  partition_flags[8];
 	u8  partitionId_table[8][8];
-	u8  reserved[0x40];
+	u8  reserved[0x30];
 } __attribute__((packed, aligned(16))) NcsdHeader;
 
 typedef struct {
@@ -214,3 +215,4 @@ u32 ConvertSdToCia(u32 param);
 u32 DecryptSdToCxi(u32 param);
 u32 DumpGameCart(u32 param);
 u32 DumpPrivateHeader(u32 param);
+u32 ProcessCartSave(u32 param);

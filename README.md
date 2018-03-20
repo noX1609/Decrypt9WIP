@@ -120,7 +120,7 @@ This is actually two categories in the main menu, but the functionality provided
 * __CTRNAND Transfer...__: This menu contains various options to enable transfer of CTRNAND partitions between consoles.
   * __Auto CTRNAND Transfer__: Automatically transfer a transferable CTRNAND image to this consoles NAND. Without A9LH installed, this will overwrite the FIRM0, FIRM1, CTRNAND. With A9LH installed, this will only overwrite CTRNAND. O3DS images can be transferred into N3DS consoles, but the NCSD header of the NAND may be overwritten.
   * __Dump transferable CTRNAND__: Dump a CTRNAND image for later use in the feature above. Transferables images can be shared between consoles.
-  * __Autofix CTRNAND__: Use this to automatically fixes the CMACs for `movable.sed`, `*.db` and system saves inside the CTRNAND. It will also fix the <id0> inside the data folder. This is useful f.e. when a CTRNAND from another console was previously injected the regular way.
+  * __Autofix CTRNAND__: Use this to automatically fixes the CMACs for `movable.sed`, `*.db` and system saves inside the CTRNAND. It will also fix the &lt;id0&gt; inside the data folder. This is useful f.e. when a CTRNAND from another console was previously injected the regular way.
 * __Partition Dump...__: This allows you to dump & decrypt any of the partitions inside your NANDs (TWLN / TWLP / AGBSAVE / FIRM0 / FIRM1 / CTRNAND / Sector0x96). Partitions with a file system (TWLN / TWLP / CTRNAND) can easily be mounted, viewed and edited on Windows via [OSFMount](http://www.osforensics.com/tools/mount-disk-images.html). These partitions are included in your NAND and can be dumped by this feature:
   * __TWLN__: _TWL-NAND FAT16 File System_ - this is the same as on a Nintendo DSi console. Installed DSiWare titles reside in this partition. This partition can be used, f.e. to set up [SudokuHax](https://gbatemp.net/threads/tutorial-new-installing-sudokuhax-on-3ds-4-x-9-2.388621/).
   * __TWLP__: _TWL-NAND PHOTO FAT12 File System_ - this is a Nintendo DSi specific partition for storing photos.
@@ -191,6 +191,15 @@ This category includes all features handling dumping of content from external ca
 * __Dump & Decrypt Cart (trim)__: Same as above, but discards the unused padding for smaller output and faster processing. This is recommended over the above feature.
 * __Dump Cart to CIA__: Use this to directly dump an inserted cartridge to a fully decrypted CIA file, which can be installed to a patched system using CIA installer software like [FBI](https://github.com/Steveice10/FBI/releases). For most users, this type of dump will be the most convenient. NTR/TWL cartridges can't be dumped to a CIA file.
 * __Dump Private Header__: Dumps the cartridge unique private header from the inserted cartridge.
+* __Flash Savegame to Cart__: Flash a savegame file to a retail game cartridge. This currently only works for NTR/TWL carts. The savegame to flash must have a filename of ndscart*.sav.
+
+### NDS Flashcart Options
+This category includes special features for certain NDS type flashcarts (currently only the AK2i).
+* __Auto NTRCARDHAX to AK2i__: This performs an automatic NTRCARDHAX injection to the AK2i flashcart.
+* __Dump AK2i__: Use this to dump the AK2i flashcart bootrom to the game directory.
+* __Inject AK2i__: Use this to inject the AK2i flashcart bootrom from the game directory.
+* __Inject NTRCARDHAX to AK2i__: Patch and inject the NTRCARDHAX payload to the AK2i flashcart. AK2i 1.41 version is required. If your AK2i is not on this version, upgrade or downgrade to it.
+* __Restore AK2i bootrom__: Restore the AK2i flashcart original bootrom.
 
 ### Maintenance Options
 This category includes special features which allow you to test and manage Decrypt9 internal functionality. 
@@ -222,6 +231,7 @@ You may use this under the terms of the GNU General Public License GPL v2 or und
 * osilloscorpion and idgrepthat for enabling NTR cart dumps
 * profi200 for helpful hints that first made developing some features possible
 * Al3x_10m for helping me with countless hours of testing and useful advice
+* Shadowhand for being awesome and [hosting my nightlies](https://d0k3.secretalgorithm.com/)
 * SciresM and Reisyukaku for helping me allow devkit compatibility
 * liomajor, Datalogger, zoogie, atkfromabove, mixups, key1340, k8099, Supster131, stbinan, Wolfvak, imanoob, Stary2001, kasai07 and countless others from freenode #Cakey and the GBAtemp forums for testing, feedback and helpful hints
 * Everyone I forgot about - if you think you deserve to be mentioned, just contact me

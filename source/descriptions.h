@@ -29,14 +29,13 @@ extern char *DumpGameCartFullDesc,
             *DumpGameCartDecFullDesc,
             *DumpGameCartDecTrimDesc,
             *DumpGameCartCIADesc,
-            *DumpPrivateHeaderDesc;
+            *DumpPrivateHeaderDesc,
+            *DumpCartSaveDesc,
+            *FlashCartSaveDesc;
 
 // NDS Flashcart Options
 extern char *AK2iDumpDesc,
-            *AK2iInjectDesc,
-            *AK2iAutoPatchDesc,
-            *AK2iPatchAndInjectDesc,
-            *AK2iRestoreBootromDesc;
+            *AK2iFlashDesc;
 
 // SysNAND/EmuNAND Backup/Restore Options
 extern char *DumpNandFullDesc,

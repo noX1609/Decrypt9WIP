@@ -60,6 +60,7 @@ u32 InitializeD9(MenuInfo *menu)
     Debug("");    
     
     if (InitFS()) {
+        char serial[16];
         Debug("Initializing SD card... success");
         FileGetData("d9logo.bin", BOT_SCREEN, 320 * 240 * 3, 0);
         Debug("Build: %s", BUILD_NAME);
@@ -78,6 +79,8 @@ u32 InitializeD9(MenuInfo *menu)
             errorlevel = (errorlevel < 1) ? 1 : errorlevel;
         if (SetupAgbCmacKeyY0x24()) // AGBSAVE CMAC KeyY
             errorlevel = (errorlevel < 1) ? 1 : errorlevel;
+        GetSerial(serial);
+        Debug("Serial number: %s", serial);
         Debug("Finalizing Initialization...");
         RemainingStorageSpace();
     } else {
@@ -95,8 +98,9 @@ u32 InitializeD9(MenuInfo *menu)
     return errorlevel;
 }
 
+u8 *top_screen, *bottom_screen;
 
-int main()
+int main(int argc, char** argv)
 {
     MenuInfo menu[] =
     {
@@ -166,24 +170,23 @@ int main()
             }
         },
         {
-            "Gamecart Dumper Options", 6,
+            "Gamecart Dumper Options", 7,
             {
                 { "Dump Cart (full)",             DumpGameCartFullDesc,    &DumpGameCart,          0 },
                 { "Dump Cart (trim)",             DumpGameCartTrimDesc,    &DumpGameCart,          CD_TRIM },
                 { "Dump & Decrypt Cart (full)",   DumpGameCartDecFullDesc, &DumpGameCart,          CD_DECRYPT },
                 { "Dump & Decrypt Cart (trim)",   DumpGameCartDecTrimDesc, &DumpGameCart,          CD_DECRYPT | CD_TRIM },
                 { "Dump Cart to CIA",             DumpGameCartCIADesc,     &DumpGameCart,          CD_DECRYPT | CD_MAKECIA },
-                { "Dump Private Header",          DumpPrivateHeaderDesc,   &DumpPrivateHeader,     0 }
+                { "Dump Private Header",          DumpPrivateHeaderDesc,   &DumpPrivateHeader,     0 },
+                // { "Dump Savegame from Cart",      DumpCartSaveDesc,        &ProcessCartSave,       0 },
+                { "Flash Savegame to Cart",       DumpCartSaveDesc,        &ProcessCartSave,       CD_FLASH }
             }
         },
         {
-            "NDS Flashcart Options", 5,
+            "NDS Flashcart Options", 2,
             {
-                { "Auto NTRCARDHAX to AK2i",      AK2iAutoPatchDesc,       &AutoAk2iCart,          0 },
                 { "Dump AK2i",                    AK2iDumpDesc,            &DumpAk2iCart,          0 },
-                { "Inject AK2i",                  AK2iInjectDesc,          &InjectAk2iCart,        0 },
-                { "Inject NTRCARDHAX to AK2i",    AK2iPatchAndInjectDesc,  &PatchAndInjectAk2iCart,0 },
-                { "Restore AK2i bootrom",         AK2iRestoreBootromDesc,  &RestoreAk2iCart,       0 }
+                { "Flash AK2i",                   AK2iFlashDesc,           &FlashAk2iCart,         0 }
             }
         },
         {
@@ -204,7 +207,7 @@ int main()
                 { "NAND Backup (min size)",       DumpNandMinDesc,         &DumpNand,              NB_MINSIZE },
                 { "NAND Restore",                 RestoreNandDesc,         &RestoreNand,           N_NANDWRITE | N_A9LHWRITE },
                 { "NAND Restore (forced)",        RestoreNandForcedDesc,   &RestoreNand,           N_NANDWRITE | N_A9LHWRITE | NR_NOCHECKS },
-                { "NAND Restore (keep a9lh)",     RestoreNandKeepHaxDesc,  &RestoreNand,           N_NANDWRITE | NR_KEEPA9LH },
+                { "NAND Restore (keep hax)",      RestoreNandKeepHaxDesc,  &RestoreNand,           N_NANDWRITE | NR_KEEPA9LH },
                 { "Validate NAND Dump",           ValidateNandDumpDesc,    &ValidateNandDump,      0 }
             }
         },
@@ -447,6 +450,17 @@ int main()
             NULL, 0, { { 0 } } // empty menu to signal end
         }
     };
+   // Fetch the framebuffer addresses
+    if(argc >= 2) {
+        // newer entrypoints
+        u8 **fb = (u8 **)(void *)argv[1];
+        top_screen = fb[0];
+        bottom_screen = fb[2];
+    } else {
+        // outdated entrypoints
+        top_screen = (u8*)(*(u32*)0x23FFFE00);
+        bottom_screen = (u8*)(*(u32*)0x23FFFE08);
+    }
 
     u32 menu_exit = MENU_EXIT_REBOOT;
 

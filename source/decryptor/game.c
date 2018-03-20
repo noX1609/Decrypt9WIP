@@ -5,6 +5,7 @@
 #include "gamecart/protocol.h"
 #include "gamecart/command_ctr.h"
 #include "gamecart/command_ntr.h"
+#include "gamecart/card_eeprom.h"
 #include "decryptor/aes.h"
 #include "decryptor/sha.h"
 #include "decryptor/decryptor.h"
@@ -27,9 +28,11 @@ u32 GetSdCtr(u8* ctr, const char* path)
     u32 plen = 0;
     // poor man's UTF-8 -> UTF-16
     for (u32 i = 0; i < 128; i++) {
-        hashstr[2*i] = path[i];
+        u8 symbol = path[i];
+        if ((symbol >= 'A') && (symbol <= 'Z')) symbol += ('a' - 'A');
+        hashstr[2*i] = symbol;
         hashstr[2*i+1] = 0;
-        if (path[i] == 0) {
+        if (symbol == 0) {
             plen = i;
             break;
         }
@@ -1450,7 +1453,7 @@ u32 ConvertSdToCia(u32 param)
         
         // CIA stub
         u32 stub_size = BuildCiaStubTmd(stub, tmd, tmd_size);
-        if (stub_size == 0) {
+        if ((stub_size == 0) || (stub_size > 0x4000)) {
             Debug("Failed building the CIA stub");
             continue;
         }
@@ -1488,6 +1491,7 @@ u32 ConvertSdToCia(u32 param)
                 if (DebugCheckCancel())
                     return 1;
             }
+            ShowProgress(0, 0);
         }
         
         if (!tik_legit)
@@ -1539,12 +1543,13 @@ u32 ConvertSdToCia(u32 param)
         u32 c = 0;
         u32 next_offset = stub_size;
         u32 content_count = getbe16(tmd->content_count);
+        bool dlc = (tid_high == 0x0004008C);
         for (c = 0; c < content_count; c++) {
             u32 id = getbe32(content_list[c].id);
             u32 size = (u32) getbe64(content_list[c].size);
             u32 offset = next_offset;
             next_offset = offset + size;
-            snprintf(filename, 16, "/%08lx.app", id);
+            snprintf(filename, 32, (dlc) ? "/00000000/%08lx.app" : "/%08lx.app", id);
             Debug("Injecting content id %08lX (%lu kB)...", id, size / 1024);
             if (!FileOpen(titlepath)) {
                 Debug("Content not found");
@@ -1953,6 +1958,7 @@ u32 DumpCtrGameCart(u32 param)
     
     // output some info
     Debug("Product ID: %.16s", ncch->productcode);
+    Debug("Product version: %02u", ((u8*)ncsd)[0x312]);
     Debug("Cartridge data size: %lluMB", cart_size / 0x100000);
     Debug("Cartridge used size: %lluMB", data_size / 0x100000);
     if (data_size > cart_size) {
@@ -1976,7 +1982,8 @@ u32 DumpCtrGameCart(u32 param)
         dump_size = (param & CD_TRIM) ? data_size : cart_size;
         Debug("Cartridge dump size: %lluMB", dump_size / 0x100000);
         if ((dump_size == 0x100000000) && (data_size < dump_size)) {
-            dump_size -= 0x200; // silently remove the last sector for 4GB ROMs
+            Debug("Warning: 4GB rom, ignoring last byte");
+            dump_size--; // remove the last byte for 4GB carts
         } else if (dump_size >= 0x100000000) { // should not happen
             Debug("Error: Too big for the FAT32 file system");
             if (!(param & CD_TRIM))
@@ -1993,8 +2000,13 @@ u32 DumpCtrGameCart(u32 param)
     
     // create file, write CIA / NCSD header
     Debug("");
-    snprintf(filename, 64, "/%s%s%.16s%s.%s", GetGameDir() ? GetGameDir() : "", GetGameDir() ? "/" : "", 
-        ncch->productcode, (param & CD_DECRYPT) ? "-dec" : "", (param & CD_MAKECIA) ? "cia" : "3ds");
+    snprintf(filename, 64, "/%s%s%.16s_%02u%s.%s",
+        GetGameDir() ? GetGameDir() : "",
+        GetGameDir() ? "/" : "",
+        ncch->productcode,
+        ((u8*)ncsd)[0x312],	// version
+        (param & CD_DECRYPT) ? "-dec" : "",
+        (param & CD_MAKECIA) ? "cia" : "3ds");
     if (!FileCreate(filename, true)) {
         Debug("Could not create output file on SD");
         return 1;
@@ -2134,12 +2146,12 @@ u32 DumpTwlGameCart(u32 param)
     u8* dsibuff = BUFFER_ADDRESS;
     u8* buff = BUFFER_ADDRESS+0x8000;
     u64 offset = 0x8000;
-    char name[16];
     u32 arm9iromOffset = -1;
     int isDSi = 0;
 
     memset (buff, 0x00, 0x8000);
 
+	Cart_Reset();
 
     NTR_CmdReadHeader (buff);
     if (buff[0] == 0x00) {
@@ -2147,16 +2159,16 @@ u32 DumpTwlGameCart(u32 param)
         return 1;
     }
 
-    memset (name, 0x00, sizeof (name));
-    memcpy (name, &buff[0x00], 12);
-    Debug("Product name: %s", name);
-
-    memset (name, 0x00, sizeof (name));
-    memcpy (name, &buff[0x0C], 4 + 2);
-    Debug("Product ID: %s", name);
+    // Unitcode (00h=NDS, 02h=NDS+DSi, 03h=DSi) (bit1=DSi)
+    isDSi = (buff[0x12] != 0x00);
+    Debug("Product name: %.12s", (char*) &buff[0x00]);
+    Debug("Product ID: %.6s", (char*) &buff[0x0C]);
+    Debug("Product version: %02u", buff[0x1E]);
 
     cart_size = (128 * 1024) << buff[0x14];
-    data_size = *((u32*)&buff[0x80]);;
+    // NTR used data size field does not include TWL-specific data.
+    // Use the TWL field.
+    data_size = (isDSi) ? *((u32*)&buff[0x210]) : *((u32*)&buff[0x80]);
     dump_size = (param & CD_TRIM) ? data_size : cart_size;
     Debug("Cartridge data size: %lluMB", cart_size / 0x100000);
     Debug("Cartridge used size: %lluMB", data_size / 0x100000);
@@ -2173,7 +2185,10 @@ u32 DumpTwlGameCart(u32 param)
     }
 
     Debug("");
-    snprintf(filename, 64, "/%s%s%s.nds", GetGameDir() ? GetGameDir() : "", GetGameDir() ? "/" : "", name);
+    snprintf(filename, 64, "/%s%s%.6s_%02u.nds",
+        GetGameDir() ? GetGameDir() : "",
+        GetGameDir() ? "/" : "",
+        (const char*)&buff[0x0C], buff[0x1E]);
 
     if (!DebugFileCreate(filename, true))
         return 1;
@@ -2182,13 +2197,9 @@ u32 DumpTwlGameCart(u32 param)
         return 1;
     }
     
-    // Unitcode (00h=NDS, 02h=NDS+DSi, 03h=DSi) (bit1=DSi)
-    if (buff[0x12] != 0x00) {
-        isDSi = 1;
-        
+    if (isDSi) {
         // initialize cartridge
-        Cart_Init();
-        //Cart_GetID();
+        Cart_Reset();
         
         NTR_CmdReadHeader (dsibuff);
         
@@ -2305,6 +2316,70 @@ u32 DumpPrivateHeader(u32 param)
         Debug("Could not create output file on SD");
         return 1;
     }
+
+    return 0;
+}
+
+u32 ProcessCartSave(u32 param)
+{
+    u8* buffer = BUFFER_ADDRESS;
+    char filename[64];
+    u32 saveSize = 0;
+    int saveType = 0;
+    u32 cartId;
+    
+    // check if cartridge inserted
+    if (REG_CARDCONF2 & 0x1) {
+        Debug("Cartridge was not detected");
+        return 1;
+    }
+
+    // initialize cartridge
+    Cart_Init();
+    cartId = Cart_GetID();
+    Debug("Cartridge ID: %08X", Cart_GetID());
+    Debug("Cartridge type: %s", (cartId & 0x10000000) ? "CTR" : "NTR/TWL");
+
+    // check options vs. cartridge type
+    if (cartId & 0x10000000) {
+        Debug("Not possible for CTR carts");
+        return 1;
+    }
+    
+    // preparations
+    saveType = cardEepromGetType();
+    saveSize = cardEepromGetSize();
+    Debug("eeprom type: %i", saveType);
+    Debug("eeprom size: %u kB", saveSize / 1024);
+    if ((saveType <= 0) || (saveSize > BUFFER_MAX_SIZE)) {
+        Debug("Invalid eeprom chip detected or not available");
+        return 1;
+    }
+    Debug("");
+    
+    if (param & CD_FLASH) {
+        // user file select, load & write
+        if (InputFileNameSelector(filename, "ndscart.sav", NULL, NULL, 0, saveSize, true) != 0)
+            return 1;
+        if (FileGetData(filename, buffer, saveSize, 0) != saveSize) {
+            Debug("Error reading file");
+            return 1;
+        }
+        Debug("Writing savegame...");
+        // full erase for eeprom type 3
+        if (saveType == 3) cardEepromChipErase();
+        cardWriteEeprom(0, buffer, saveSize, saveType);
+    } else {
+        Debug("Reading savegame...");
+        cardReadEeprom(0, buffer, saveSize, saveType);
+        if (OutputFileNameSelector(filename, "ndscart.sav", NULL) != 0)
+            return 1;
+        if (FileDumpData(filename, buffer, saveSize) != saveSize) {
+            Debug("Error writing file");
+            return 1;
+        }
+    }
+    
     
     return 0;
 }

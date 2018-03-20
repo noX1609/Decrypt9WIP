@@ -20,7 +20,7 @@ TitleListInfo titleList[] = {
     { "Download Play"         , 0x00040010, { 0x00020100, 0x00021100, 0x00022100, 0x00026100, 0x00027100, 0x00028100 } },
     { "Activity Log"          , 0x00040010, { 0x00020200, 0x00021200, 0x00022200, 0x00026200, 0x00027200, 0x00028200 } },
     { "Health&Safety"         , 0x00040010, { 0x00020300, 0x00021300, 0x00022300, 0x00026300, 0x00027300, 0x00028300 } },
-    { "Health&Safety (N3DS)"  , 0x00040010, { 0x20020300, 0x20021300, 0x20022300, 0x00000000, 0x00000000, 0x00000000 } },
+    { "Health&Safety (N3DS)"  , 0x00040010, { 0x20020300, 0x20021300, 0x20022300, 0x00000000, 0x20027300, 0x00000000 } },
     { "3DS Camera"            , 0x00040010, { 0x00020400, 0x00021400, 0x00022400, 0x00026400, 0x00027400, 0x00028400 } },
     { "3DS Sound"             , 0x00040010, { 0x00020500, 0x00021500, 0x00022500, 0x00026500, 0x00027500, 0x00028500 } },
     { "Mii Maker"             , 0x00040010, { 0x00020700, 0x00021700, 0x00022700, 0x00026700, 0x00027700, 0x00028700 } },
@@ -401,16 +401,21 @@ u32 GetRegion(void)
 
 u32 GetSerial(char* serial)
 {
-    PartitionInfo* p_info = GetPartitionInfo(P_CTRNAND);
-    u8 secureinfo[0x200];
-    u32 offset;
-    u32 size;
-    
-    if ((SeekFileInNand(&offset, &size, "RW         SYS        SECURE~?   ", p_info) != 0) ||
-        (DecryptNandToMem(secureinfo, offset, size, p_info) != 0))
-        return 1;
-    
-    snprintf(serial, 16, "%.15s", (char*) (secureinfo + 0x102));
+    static char serial_store[16] = { 0 };
+    if (!(*serial_store)) {
+        PartitionInfo* p_info = GetPartitionInfo(P_CTRNAND);
+        u8 secureinfo[0x200];
+        u32 offset;
+        u32 size;
+        
+        if ((SeekFileInNand(&offset, &size, "RW         SYS        SECURE~?   ", p_info) == 0) &&
+            (DecryptNandToMem(secureinfo, offset, size, p_info) == 0)) {
+            snprintf(serial_store, 16, "%.15s", (char*) (secureinfo + 0x102));
+        } else {
+            snprintf(serial_store, 16, "UNKNOWN");
+        }            
+    }
+    memcpy(serial, serial_store, 16);
     return 0;
 }
 
@@ -476,7 +481,8 @@ u32 FixNandCmac(u32 param) {
             return 1;
     } else if (sscanf(f_info->path, "DATA       ???????????SYSDATA    %08llX   00000000   ", &id) == 1) { // system save
         Debug("CMAC id: %08llX", id); 
-        SetupMovableKeyY(true, 0x30, NULL);
+        if (SetupMovableKeyY(true, 0x30, NULL) != 0)
+            return 1;
         memcpy(temp + 0x00, "CTR-SYS0", 8);
         memcpy(temp + 0x08, &id, 8);
         memcpy(temp + 0x10, data + 0x100, 0x100);
